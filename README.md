@@ -1,0 +1,2 @@
+# imagegen
+Image generation plugin
