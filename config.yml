@@ -1,0 +1,12 @@
+# Imagegen Plugin Configuration
+service_location_url: http://127.0.0.1:8097
+
+# Default bucket for storing generated images
+image_bucket: imagelibrary
+
+# AI/Run platform registration settings
+# ai_run_platform_url: http://pylon_main:8080/api/v2/provider/register
+# ai_run_platform_token: ""
+# ai_run_platform_verify: false
+# ai_run_platform_timeout: 120
+# ai_run_platform_delay: 5

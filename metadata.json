@@ -1,0 +1,7 @@
+{
+  "name": "Host for tools: Image Generation",
+  "version": "1.0.0",
+  "description": "Image generation",
+  "depends_on": [],
+  "init_after": []
+}
