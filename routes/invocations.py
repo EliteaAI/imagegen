@@ -82,14 +82,19 @@ class Route:  # pylint: disable=E1101,R0903
                     if isinstance(result, tuple) and len(result) == 2:
                         return result[0], result[1]
                     #
-                    # Handle dict response
+                    # Handle dict response (pass through status/error fields — see #6168)
                     if isinstance(result, dict):
-                        return {
+                        response = {
                             "invocation_id": invocation_id,
-                            "status": "Completed",
+                            "status": result.get("status", "Completed"),
                             "result": result.get("result", ""),
                             **custom_events,
                         }
+                        if "error_category" in result:
+                            response["error_category"] = result["error_category"]
+                        if "error_type" in result:
+                            response["error_type"] = result["error_type"]
+                        return response
                     #
                     return {
                         "invocation_id": invocation_id,
