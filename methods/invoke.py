@@ -144,7 +144,7 @@ class Method:  # pylint: disable=E1101,R0903,W0201
             #
             if not api_base:
                 return _make_error_result(
-                    "api_base is required in llm_settings"
+                    "api_base is required in llm_settings", category="invalid_input"
                 )
             #
             # Initialize EliteAClientMini
@@ -177,11 +177,11 @@ class Method:  # pylint: disable=E1101,R0903,W0201
             elif tool_name == "edit_image":
                 return self._perform_edit_image(client, params, image_bucket, model_image_generation, name_prefix)
             else:
-                return _make_error_result(f"Unknown tool: {tool_name}")
+                return _make_error_result(f"Unknown tool: {tool_name}", category="invalid_input")
             #
         except ValueError as e:
             log.error("ImageGen: Validation error: %s", str(e))
-            return _make_error_result(str(e))
+            return _make_error_result(str(e), category="invalid_input")
         except Exception as e:  # pylint: disable=W0718
             log.exception("ImageGen: Unexpected error during image operation")
             return _make_error_result(f"Unexpected error: {str(e)}")
@@ -274,7 +274,7 @@ class Method:  # pylint: disable=E1101,R0903,W0201
         #
         if not source_image_data:
             return _make_error_result(
-                f"Failed to download source image: {source_filepath}"
+                f"Failed to download source image: {source_filepath}", category="artifact_error"
             )
         #
         # Download mask if provided
@@ -285,7 +285,7 @@ class Method:  # pylint: disable=E1101,R0903,W0201
             mask_data = client.download_artifact_by_filepath(mask_filepath)
             if not mask_data:
                 return _make_error_result(
-                    f"Failed to download mask file: {mask_filepath}"
+                    f"Failed to download mask file: {mask_filepath}", category="artifact_error"
                 )
         #
         # Edit image
@@ -432,12 +432,20 @@ class Method:  # pylint: disable=E1101,R0903,W0201
             })
             saved_count += 1
         #
-        # Add summary message at the beginning
+        if saved_count == 0:
+            return _make_error_result(
+                f"Failed to save any images ({len(images)} attempted)", category="artifact_error"
+            )
         #
+        # Add summary message at the beginning (note partial failures, if any)
+        #
+        summary = f"{operation.capitalize()} and saved {saved_count} image(s) successfully."
+        if saved_count < len(images):
+            summary += f" {len(images) - saved_count} image(s) failed to save."
         result_objects.insert(0, {
             "object_type": "message",
             "data": (
-                f"{operation.capitalize()} and saved {saved_count} image(s) successfully. "
+                f"{summary} "
                 "Note: filepath is an internal storage path, not a URL — do not construct links from it."
             )
         })
@@ -451,11 +459,13 @@ class Method:  # pylint: disable=E1101,R0903,W0201
         }
 
 
-def _make_error_result(message):
-    """ Create error result in expected format """
+def _make_error_result(message, category="runtime_error"):
+    """ Create error result in expected format (see #6168 — status/category are machine-readable now) """
     return {
         "invocation_id": str(uuid.uuid4()),
-        "status": "Failed",
+        "status": "Error",
+        "error_category": category,
+        "error_type": category,
         "result": json.dumps([{
             "object_type": "message",
             "data": f"Error: {message}"
